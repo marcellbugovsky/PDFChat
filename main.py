@@ -2,80 +2,105 @@
 
 import logging
 import sys
-from config import LOG_LEVEL, LOG_FORMAT, N_RETRIEVAL_RESULTS, DISTANCE_THRESHOLD, \
-                   CHUNK_SIZE, CHUNK_OVERLAP, PDF_FILE_PATH
-from document_processor import load_and_clean_pdf_text, chunk_by_headlines
+
+# Import configuration constants
+from config import (
+    LOG_LEVEL, LOG_FORMAT, N_RETRIEVAL_RESULTS, DISTANCE_THRESHOLD,
+    PDF_FILE_PATH # CHUNK_SIZE, CHUNK_OVERLAP no longer directly used here
+)
+
+# Import core components
+from document_processor import load_and_clean_pdf_text, chunk_by_headings # Use headline chunking
 from vector_store_manager import VectorStoreManager
 from llm_handler import LLMHandler
 
-# Logging Konfiguration
-logging.basicConfig(level=LOG_LEVEL, format=LOG_FORMAT)
+# Configure logging based on config
+logging.basicConfig(level=LOG_LEVEL, format=LOG_FORMAT, stream=sys.stdout)
+logger = logging.getLogger(__name__) # Use a logger specific to this module
 
 def run_chatbot():
-    """Initialisiert und startet den Chatbot."""
+    """Initializes and runs the PDF chatbot application."""
     try:
-        # --- Initialisierung ---
-        logging.info("Initialisiere Komponenten...")
-        vector_manager = VectorStoreManager()
-        llm_handler = LLMHandler()
-        logging.info("Komponenten initialisiert.")
+        # --- Initialization ---
+        logger.info("Initializing components...")
+        vector_manager = VectorStoreManager() # Handles embeddings and ChromaDB
+        llm_handler = LLMHandler() # Handles LLM loading and generation
+        logger.info("Components initialized successfully.")
 
-        # --- Sicherstellen, dass Vektor-Store bereit ist ---
+        # --- Ensure Vector Store is Ready ---
+        # Check if indexing is needed (e.g., collection is empty)
         if vector_manager.needs_indexing():
-            logging.info("Vektor-Store muss indiziert werden.")
-            pdf_text = load_and_clean_pdf_text() # Nutzt Pfad aus config
+            logger.info("Vector store needs indexing. Processing PDF document.")
+            # 1. Load and clean text from PDF specified in config
+            pdf_text = load_and_clean_pdf_text(PDF_FILE_PATH)
             if not pdf_text:
-                 logging.error("Konnte PDF nicht laden, Abbruch.")
-                 return # Beendet die Funktion, wenn PDF nicht geladen werden kann
+                 logger.error("Failed to load text from PDF. Exiting.")
+                 return # Exit if PDF loading failed
 
-            text_chunks = chunk_by_headlines(pdf_text)
+            # 2. Chunk text using the headline strategy
+            text_chunks = chunk_by_headings(pdf_text)
             if not text_chunks:
-                 logging.error("Konnte keine Chunks erstellen, Abbruch.")
+                 logger.error("Failed to create text chunks. Exiting.")
                  return
 
+            # 3. Index the generated chunks
             success = vector_manager.index_documents(text_chunks)
             if not success:
-                 logging.error("Indizierung fehlgeschlagen, Abbruch.")
+                 logger.error("Failed to index documents. Exiting.")
                  return
+            logger.info("Document processed and indexed successfully.")
         else:
-            logging.info("Nutze existierenden Vektor-Store.")
+            logger.info("Using existing vector store.")
 
-        # --- Interaktive Schleife ---
-        print("\nPDF Chatbot Initialisiert. Fragen zum Dokument stellen.")
-        print("Geben Sie 'quit' oder 'exit' ein, um zu beenden.")
+        # --- Interactive Chat Loop ---
+        print("\nPDF Chatbot Initialized. Ask questions about the document.")
+        print("Type 'quit' or 'exit' to stop.")
 
         while True:
-            user_query = input("\nIhre Frage: ")
-            if user_query.lower() in ['quit', 'exit']:
-                print("Beende Chatbot.")
-                break
-            if not user_query.strip():
-                print("Bitte geben Sie eine Frage ein.")
-                continue
+            try:
+                user_query = input("\nYour question: ")
+                if user_query.lower() in ['quit', 'exit']:
+                    print("Exiting chatbot.")
+                    break
+                if not user_query.strip():
+                    print("Please enter a question.")
+                    continue
 
-            # 1. Chunks abrufen
-            relevant_docs, distances = vector_manager.retrieve_relevant_chunks(
-                user_query, N_RETRIEVAL_RESULTS
-            )
+                # 1. Retrieve relevant chunks
+                relevant_docs, distances = vector_manager.retrieve_relevant_chunks(
+                    user_query, N_RETRIEVAL_RESULTS
+                )
 
-            # 2. Guardrail & Antwortgenerierung
-            answer = ""
-            if relevant_docs and distances[0] <= DISTANCE_THRESHOLD:
-                logging.info(f"Relevante Chunks gefunden (beste Distanz: {distances[0]:.4f}). Generiere Antwort...")
-                answer = llm_handler.generate_answer(user_query, relevant_docs)
-            elif relevant_docs:
-                logging.warning(f"Chunks gefunden, aber beste Distanz ({distances[0]:.4f}) > Schwellenwert ({DISTANCE_THRESHOLD}).")
-                answer = "Ich habe verwandte Informationen gefunden, aber sie scheinen nicht relevant genug zu sein, um Ihre Frage sicher zu beantworten."
-            else:
-                logging.info("Keine relevanten Chunks gefunden.")
-                answer = "Ich konnte keine relevanten Informationen im Dokument finden, um diese Frage zu beantworten."
+                # 2. Check relevance and generate answer
+                answer = ""
+                if relevant_docs and distances[0] <= DISTANCE_THRESHOLD:
+                    # Sufficiently relevant chunks found, generate answer
+                    logger.info(f"Relevant chunks found (best distance: {distances[0]:.4f}). Generating answer...")
+                    answer = llm_handler.generate_answer(user_query, relevant_docs)
+                elif relevant_docs:
+                    # Chunks found, but distance is too high (below threshold)
+                    logger.warning(f"Chunks found, but best distance ({distances[0]:.4f}) > threshold ({DISTANCE_THRESHOLD}).")
+                    answer = "I found some related information, but it might not be relevant enough to answer your question precisely."
+                else:
+                    # No relevant chunks found
+                    logger.info("No relevant chunks found for the query.")
+                    answer = "I could not find relevant information in the document to answer that question."
 
-            # 3. Antwort ausgeben
-            print(f"\nAntwort:\n{answer}")
+                # 3. Print the final answer
+                print(f"\nAnswer:\n{answer}")
+
+            except KeyboardInterrupt: # Allow graceful exit with Ctrl+C
+                 print("\nExiting chatbot.")
+                 break
+            except Exception as e: # Catch other potential errors during the loop
+                 logger.error(f"An error occurred during the chat loop: {e}", exc_info=True)
+                 print("An unexpected error occurred. Please try again.")
+
 
     except Exception as e:
-        logging.error(f"Ein unerwarteter Fehler ist im Hauptablauf aufgetreten: {e}", exc_info=True)
-        print("Ein kritischer Fehler ist aufgetreten. Bitte überprüfen Sie die Logs.")
+        # Catch errors during initialization
+        logger.error(f"A critical error occurred during chatbot initialization: {e}", exc_info=True)
+        print("A critical error occurred during startup. Please check the logs.")
 
 if __name__ == "__main__":
     run_chatbot()
