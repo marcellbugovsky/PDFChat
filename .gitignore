@@ -1,0 +1,81 @@
+# --- Python ---
+# Virtual Environments
+env/
+venv/
+ENV/
+VENV/
+.env/
+.venv/
+*/__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / Installation / Build artifacts
+build/
+dist/
+*.egg-info/
+wheels/
+*.tar.gz
+*.egg
+*.whl
+*.pyc
+*.so
+
+# --- IDEs / Editors ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.project
+.pydevproject
+.settings/
+
+# --- Operating System Files ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Testing ---
+.pytest_cache/
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+
+# --- Notebooks ---
+.ipynb_checkpoints
+
+# --- Data / Models / Caches ---
+# Ignore potentially large data files, downloaded models, indexes, and caches.
+# Add specific directories or file patterns if you store these within the project.
+models/
+data/
+*.index
+*.faiss
+chroma_db/
+*.gguf
+*.bin
+*.onnx
+*.pt
+*.pth
+# Hugging Face cache (usually global, but good practice if local)
+.cache/
+huggingface_cache/
+
+# --- Secrets / Local Config ---
+# Ignore environment variables or local configuration overrides
+*.env
+config.local.*
+credentials.*
+secrets.*
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Other ---
+*.swp
+*.swo
+*~
