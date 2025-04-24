@@ -23,9 +23,9 @@ LLM_N_THREADS = 8  # Anzahl CPU-Threads für LLM (Anpassen an Ihr System)
 LLM_N_GPU_LAYERS = 0 # Anzahl der auf die GPU auszulagernden Schichten (0 für CPU)
 
 # --- LLM Generierungs-Einstellungen ---
-LLM_MAX_NEW_TOKENS = 300 # Maximale Token für die Antwort
+LLM_MAX_NEW_TOKENS = 512 # Maximale Token für die Antwort
 LLM_TEMPERATURE = 0.5 # Kreativität der Antwort (niedriger für Fakten)
-LLM_STOP_TOKENS = ['<|end|>', 'Antwort:', '\nFrage:'] # Wann soll das LLM aufhören zu generieren
+LLM_STOP_TOKENS = ['<|end|>', '<|endoftext|>'] # Wann soll das LLM aufhören zu generieren
 
 # --- Logging ---
 LOG_LEVEL = "INFO" # Loglevel (DEBUG, INFO, WARNING, ERROR)
