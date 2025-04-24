@@ -12,3 +12,4 @@ chromadb
 ctransformers[cuda] # Use [cuda] if you have an NVIDIA GPU, otherwise just 'ctransformers'
 transformers
 accelerate
+llama-cpp-python
