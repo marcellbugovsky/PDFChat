@@ -8,8 +8,14 @@ torch
 # Vector Store (ChromaDB - local persistence)
 chromadb
 
-# LLM (using CTransformers for GGUF models & Transformers for general utilities)
-ctransformers[cuda] # Use [cuda] if you have an NVIDIA GPU, otherwise just 'ctransformers'
-transformers
-accelerate
+# LLM (using llama-cpp-python)
 llama-cpp-python
+# transformers # Keep transformers as llama-cpp-python might use its tokenizer
+# accelerate # Keep accelerate
+
+# Web Interface
+streamlit # <-- Add this line
+
+# Optional: Orchestration Frameworks (uncomment if/when needed)
+# langchain
+# llama-index
